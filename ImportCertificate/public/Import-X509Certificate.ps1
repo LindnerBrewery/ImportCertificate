@@ -38,8 +38,9 @@
     
     begin {
         function ImportCert ($storeLocation, $X509Certificate) {
-            $certStore = [System.Security.Cryptography.X509Certificates.X509Store]::new([System.Security.Cryptography.X509Certificates.StoreName]::Root, $storeLocation, [System.Security.Cryptography.X509Certificates.OpenFlags]::MaxAllowed);
-            #$certStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::MaxAllowed);
+            #$certStore = [System.Security.Cryptography.X509Certificates.X509Store]::new([System.Security.Cryptography.X509Certificates.StoreName]::Root, $storeLocation, [System.Security.Cryptography.X509Certificates.OpenFlags]::MaxAllowed);
+            $certStore = [System.Security.Cryptography.X509Certificates.X509Store]::new([System.Security.Cryptography.X509Certificates.StoreName]::Root, $storeLocation)
+            $certStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::MaxAllowed)
             # Add to windows store or to .net store on linux
             foreach ($cert in $X509Certificate) {
                 Write-Verbose "Importing $($cert.subject)"
