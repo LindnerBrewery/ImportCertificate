@@ -15,6 +15,9 @@ jobs:
       run: ./build.ps1 -Task Test -Bootstrap
   publish:
     name: Run build
+    needs: 
+      - test
+    if: needs.test.result == 'success'
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
