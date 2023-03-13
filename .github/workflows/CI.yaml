@@ -14,9 +14,13 @@ jobs:
       shell: pwsh
       run: ./build.ps1 -Task Test -Bootstrap
   publish:
-    name: publish
+    name: Run build
     runs-on: windows-latest
     steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      shell: pwsh
+      run: ./build.ps1 -Task Test -Bootstrap
     - name: publish
       shell: pwsh
       run: ls
