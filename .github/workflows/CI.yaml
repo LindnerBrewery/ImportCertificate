@@ -28,7 +28,7 @@ jobs:
       shell: pwsh
       run: ls
   publish2:
-    name: Run build
+    name: Run buildfail
     needs: 
       - test
     if: ${{failure()}}
