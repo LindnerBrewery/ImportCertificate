@@ -17,7 +17,7 @@ jobs:
     name: Run build
     needs: 
       - test
-    if: success()
+    if: ${{success()}}
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
@@ -31,7 +31,7 @@ jobs:
     name: Run build
     needs: 
       - test
-    if: failure()
+    if: ${{failure()}}
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
