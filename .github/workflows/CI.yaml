@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v1
     - name: Test
@@ -17,7 +17,7 @@ jobs:
     name: Run build
     needs: 
       - test
-    if: needs.test.result == 'success'
+    if: success()
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
@@ -27,4 +27,17 @@ jobs:
     - name: publish
       shell: pwsh
       run: ls
-
+  publish2:
+    name: Run build
+    needs: 
+      - test
+    if: failure()
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      shell: pwsh
+      run: ./build.ps1 -Task Test -Bootstrap
+    - name: publish
+      shell: pwsh
+      run: Write-Host "oh Foo"
