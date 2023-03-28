@@ -26,13 +26,22 @@ jobs:
       run: ./build.ps1 -Task Test -Bootstrap
     - name: publish
       shell: pwsh
-      run: ls
+      run: ls ./output
     - name: Archive Release
       uses: thedoctor0/zip-release@0.7.1
       with:
         type: 'zip'
-        path: 'ImportCertificate'
+        path: 'Output'
         filename: 'ImportCertificate.zip'
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ImportCertificate.zip
+        asset_name: mything
+        tag: ${{ github.ref }}
+        overwrite: true
+        body: "This is my release text"
   publish2:
     name: Run buildfail
     needs: 
