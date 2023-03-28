@@ -27,6 +27,12 @@ jobs:
     - name: publish
       shell: pwsh
       run: ls
+    - name: Archive Release
+      uses: thedoctor0/zip-release@0.7.1
+      with:
+        type: 'zip'
+        path: 'ImportCertificate'
+        filename: 'ImportCertificate.zip'
   publish2:
     name: Run buildfail
     needs: 
