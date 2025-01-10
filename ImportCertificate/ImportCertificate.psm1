@@ -1,4 +1,4 @@
-﻿# transformation class that transforms a clear text password to a secure string
+# transformation class that transforms a clear text password to a secure string
 class SecureStringTransformAttribute : System.Management.Automation.ArgumentTransformationAttribute
 {
     [object] Transform([System.Management.Automation.EngineIntrinsics]$engineIntrinsics, [object] $inputData)
@@ -20,8 +20,8 @@ class SecureStringTransformAttribute : System.Management.Automation.ArgumentTran
     }
 }
 # Dot source public/private functions
-$public  = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Public/*.ps1')  -Recurse -ErrorAction Stop)
-$private = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private/*.ps1') -Recurse -ErrorAction Stop)
+$public  = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'public/*.ps1')  -Recurse -ErrorAction Stop)
+$private = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'private/*.ps1') -Recurse -ErrorAction Stop)
 foreach ($import in @($public + $private)) {
     try {
         . $import.FullName

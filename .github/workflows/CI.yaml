@@ -7,10 +7,52 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v1
     - name: Test
       shell: pwsh
       run: ./build.ps1 -Task Test -Bootstrap
-
+  publish:
+    name: Run build
+    needs: 
+      - test
+    if: ${{success()}}
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      shell: pwsh
+      run: ./build.ps1 -Task Test -Bootstrap
+    - name: publish
+      shell: pwsh
+      run: ls ./output
+    - name: Archive Release
+      uses: thedoctor0/zip-release@0.7.1
+      with:
+        type: 'zip'
+        path: 'Output'
+        filename: 'ImportCertificate.zip'
+    - name: Publish to PSGallery
+      # You may pin to the exact commit or the version.
+    # uses: aammirmirza/Publish2PSGallery@3371e5207343b1f0d850b2abf1159b0edd40f570
+      uses: aammirmirza/Publish2PSGallery@PSGallery_v2
+      with:
+        # The NuGet API Key for PowerShell Gallery, with permission to push this module. You can fetch this from your PSGallery profile.
+        NuGetApiKey: ${{ secrets.PSGALLERY_APIKEY }}
+        # The filesystem path to the module to publish. It is directories that contains a .psd1.
+        modulePath: ./output/ImportCertificate
+  publish2:
+    name: Run buildfail
+    needs: 
+      - test
+    if: ${{failure()}}
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      shell: pwsh
+      run: ./build.ps1 -Task Test -Bootstrap
+    - name: publish
+      shell: pwsh
+      run: Write-Host "oh Foo"

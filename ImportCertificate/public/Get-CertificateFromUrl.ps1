@@ -43,14 +43,17 @@
     begin {}
     
     process {
+        $certificates = [System.Collections.Generic.List[System.Security.Cryptography.X509Certificates.X509Certificate2]]::new()
         # check if hostname or uri
         if ([System.Uri]::IsWellFormedUriString($Hostname, 'Absolute')) {
             $Hostname = ([uri]$Hostname).host
         }
-
-        # depending if using windows PS or PS this works differently
-        if ($PSVersionTable.PSVersion -le [version]::Parse("6.0")) {
-            Add-Type @"
+        try {
+            
+        
+            # depending if using windows PS or PS this works differently
+            if ($PSVersionTable.PSVersion -le [version]::Parse("6.0")) {
+                Add-Type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -61,34 +64,40 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     }
 }
 "@
-            [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-            $webRequest = [Net.WebRequest]::Create("https://$hostname")
-            $response = $webRequest.GetResponse()
-            $cert = $webRequest.ServicePoint.Certificate
-            $response.dispose()
-            $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
-            $chain.build($cert) | Out-Null
-            $chain.build($cert) | Out-Null # for some unknown reason you have to call this twice to get the whole chain
-            $certificates = $chain.ChainElements.Certificate
+                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                $webRequest = [Net.WebRequest]::Create("https://$hostname")
+                $response = $webRequest.GetResponse()
+                $cert = $webRequest.ServicePoint.Certificate
+                $response.dispose()
+                $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+                $chain.build($cert) | Out-Null
+                $chain.build($cert) | Out-Null # for some unknown reason you have to call this twice to get the whole chain
+                #$certificates = $chain.ChainElements.Certificate
+                $chain.ChainElements.Certificate.ForEach({ $certificates.add($_) })
+            }
+            else {
+                $Callback = { param($sender, $cert, $chain, $errors) return $true }
+                $request = [System.Net.Sockets.TcpClient]::new($hostname, '443')
+                $stream = [System.Net.Security.SslStream]::new($request.GetStream(), $true, $Callback)
+                $stream.AuthenticateAsClient($hostname) 
+                $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+                $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+                $chain.ChainPolicy.VerificationFlags = [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::AllowUnknownCertificateAuthority
+                $chain.Build($stream.RemoteCertificate) | Out-Null
+                $chain.Build($stream.RemoteCertificate) | Out-Null
+                #$certificates = $chain.ChainElements.Certificate
+                $chain.ChainElements.Certificate.ForEach({ $certificates.add($_) }) | Out-Null
+            }
         }
-        else {
-            $Callback = { param($sender, $cert, $chain, $errors) return $true }
-            $request = [System.Net.Sockets.TcpClient]::new($hostname, '443')
-            $stream = [System.Net.Security.SslStream]::new($request.GetStream(), $true, $Callback)
-            $stream.AuthenticateAsClient($hostname)
-            $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
-            $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
-            $chain.ChainPolicy.VerificationFlags = [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::AllowUnknownCertificateAuthority
-            $chain.Build($stream.RemoteCertificate) | Out-Null
-            $chain.Build($stream.RemoteCertificate) | Out-Null
-            $certificates = $chain.ChainElements.Certificate
+        catch {
+            Throw "Could't find any cerificates"
         }
         if ($HostCertificateOnly.IsPresent) {
             return $certificates[0]
         }
         elseif ($ChainOnly.IsPresent) {
             if ($certificates.count -gt 1) {
-                return $certificates[1, ($certificates.count - 1)]
+                return $certificates[1..($certificates.count - 1)]
             }
             else {
                 Write-Warning "$Hostname didn't return a chain."
@@ -98,7 +107,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 return
             }
         }
-        return $certificates
+        return @(, $certificates)
     }
     end {}
 }
