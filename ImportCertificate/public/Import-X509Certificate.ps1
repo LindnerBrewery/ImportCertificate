@@ -33,7 +33,12 @@
         [System.Security.Cryptography.X509Certificates.X509Certificate2[]]$X509Certificate,
         # Import in user contect
         [Parameter(Mandatory = $false)]
-        [switch]$UserStore
+        [switch]$UserStore,
+        # sudo Password for linux
+        [Parameter(Mandatory = $false)]
+        [SecureStringTransformAttribute()]
+        [securestring]$SudoPassword
+
     )
     
     begin {
@@ -66,10 +71,13 @@
             }
         }
         elseif ($IsLinux) {
-            if ((id -u) -eq 0 -And -not $UserStore) {
-                # Write-Verbose "Importing to Machine Store"
-                # $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine
-                # ImportCert $storeLocation $X509Certificate
+            if ($SudoPassword) {
+                $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SudoPassword )
+                $plaintextpassword = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($BSTR)
+            }
+
+            if (-not $UserStore) {
+
                 Write-Verbose "Importing to Ca Certificates"
                 foreach ($cert in $X509Certificate) {
                     Write-Verbose "Importing $($cert.subject)"
@@ -77,17 +85,38 @@
                     $filename = "$(Get-SafeAlias $cert.Subject).crt"
                     $certFile = "/tmp/$filename"
                     $certString | Add-Content $CertFile -Force -ErrorAction Stop
-                    $x = bash -c "sudo cp $CertFile /usr/local/share/ca-certificates/" *>&1
-                    Remove-Item $certFile -Force 
+                    try {
+                        #$x = bash -c "sudo cp $CertFile /usr/local/share/ca-certificates/" *>&1
+                        $result = Write-Output $plaintextpassword | sudo -S cp $CertFile /usr/local/share/ca-certificates/ 2>&1
+                        if ($LASTEXITCODE -ne 0) {
+                            throw $result
+                        }
+                    }
+                    catch {
+                        throw $_
+                    }
+                    finally {
+                        Remove-Item $certFile -Force
+                    }
+                     
                 }
-                $x= bash -c "sudo update-ca-certificates" *>&1
+                
+                try {
+                    #$x = bash -c "sudo update-ca-certificates" *>&1
+                    $result = Write-Output $plaintextpassword | sudo -S update-ca-certificates 2>&1
+                    if ($LASTEXITCODE -ne 0) {
+                        throw $result
+                    }
+                }
+                catch {
+                    throw $_
+                }
             }
-                Write-Verbose "Importing to .net Current User Store"
-                $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser
-                ImportCert $storeLocation $X509Certificate
+            Write-Verbose "Importing to .net Current User Store"
+            $storeLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser
+            ImportCert $storeLocation $X509Certificate
         }
     }
-    
     end {}
 }
 
